@@ -1,13 +1,12 @@
 package com.ocado.basket;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.val;
 import org.junit.jupiter.api.Test;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import java.io.FileReader;
+import java.io.IOException;
 import java.util.*;
+
+import static org.junit.jupiter.api.Assertions.*;
 
 
 public class BasketSplitterTest
@@ -20,10 +19,11 @@ public class BasketSplitterTest
 //
     BasketSplitter basketSplitter;
 
-    final String pathToConfig1 = "C:\\Users\\barte\\projects\\ocado-recruitment\\basket-splitter\\resources\\config-1.json";
     final String pathToConfig2 = "C:\\Users\\barte\\projects\\ocado-recruitment\\basket-splitter\\resources\\config-2.json";
+    final String pathToEmptyConfig = "C:\\Users\\barte\\projects\\ocado-recruitment\\basket-splitter\\resources\\empty-config.json";
+    final String pathToInvalidConfig = "C:\\Users\\barte\\projects\\ocado-recruitment\\basket-splitter\\resources\\invalid-config.json";
     @Test
-    void mapJsonToConfigMapTest() {
+    void mapJsonToConfig_Test() {
         basketSplitter = new BasketSplitter(pathToConfig2);
         Map<String, List<String>> config = basketSplitter.getConfig();
         Map<String, List<String>> configTest = new HashMap<>() {{
@@ -37,33 +37,47 @@ public class BasketSplitterTest
 
         assertEquals(config, configTest);
     }
-    @Test
-    void emptyBasketTest() {
-        basketSplitter = new BasketSplitter(pathToConfig2);
-        val items = new ArrayList<String>();
-        val splitMap = basketSplitter.split(items);
 
-        assertTrue(splitMap.isEmpty());
+    @Test
+    void mapJsonToConfig_InvalidFile_Test() {
+        assertThrows(RuntimeException.class, () -> basketSplitter = new BasketSplitter(pathToInvalidConfig));
     }
 
     @Test
-    void validBasketTest() {
+    void mapJsonToConfig_EmptyFile_Test() {
+        Exception e = assertThrows(IllegalStateException.class, () ->
+                basketSplitter = new BasketSplitter(pathToEmptyConfig));
+
+        assertEquals("Config file is empty", e.getMessage());
+    }
+
+    @Test
+        void emptyBasketSplitTest() {
+            basketSplitter = new BasketSplitter(pathToConfig2);
+            val items = new ArrayList<String>();
+            val split = basketSplitter.split(items);
+
+        assertTrue(split.isEmpty());
+    }
+
+    @Test
+    void validBasketSplitTest() {
         basketSplitter = new BasketSplitter(pathToConfig2);
         List<String> items = Arrays.asList(
                 "Steak (300g)",
                 "Carrots (1kg)",
-                "Soda (24x330ml)",
+                "Cold Beer (330ml)",
                 "AA Battery (4 Pcs.)",
-                "Expresso Machine",
+                "Espresso Machine",
                 "Garden Chair"
         );
 
-        Map<String, List<String>> expectedDivision = new HashMap<>() {{
+        Map<String, List<String>> expectedSplit = new HashMap<>() {{
             put(
                     "Express Delivery",
                     Arrays.asList(
                             "Steak (300g)",
-                            "Carrot (1kg)",
+                            "Carrots (1kg)",
                             "Cold Beer (330ml)",
                             "AA Battery (4 Pcs.)"
                     )
@@ -77,8 +91,8 @@ public class BasketSplitterTest
             );
         }};
 
-        Map<String, List<String>> division = basketSplitter.split(items);
-        assertEquals(division, expectedDivision);
+        Map<String, List<String>> split = basketSplitter.split(items);
+        assertEquals(expectedSplit, split);
     }
 
 
