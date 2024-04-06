@@ -15,7 +15,11 @@ public class BasketSplitter
 {
     private Map<String, List<String>> config;
     public BasketSplitter(String absolutePathToConfigFile) {
-        config = mapJsonToConfigMap(absolutePathToConfigFile);
+        Map<String, List<String>> configMap = mapJsonToConfigMap(absolutePathToConfigFile);
+        if (configMap.isEmpty()) {
+            throw new IllegalStateException("Config file is empty");
+        }
+        config = configMap;
     }
 
     private Map<String, List<String>> mapJsonToConfigMap(String absolutePathToConfigFile) {
@@ -25,20 +29,16 @@ public class BasketSplitter
         try {
             config = mapper.readValue(
                     new File(absolutePathToConfigFile),
-                    new TypeReference<>() {});
+                    new TypeReference<>() {}
+            );
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
 
-        if (!config.isEmpty()) {
-            return config;
-        }
-        else {
-            throw new IllegalStateException("Config file is empty");
-        }
+        return config;
     }
 
-    private void sortDeliveryMap(Map<String, Integer> map) {
+    private void sortDeliveryCountMap(Map<String, Integer> map) {
         List<Map.Entry<String, Integer>> list = new LinkedList<>(map.entrySet());
         list.sort(Map.Entry.comparingByValue(Comparator.reverseOrder()));
         map.clear();
@@ -47,9 +47,22 @@ public class BasketSplitter
         }
     }
 
+    private Map<String, Integer> getDeliveryCountMap(List<String> items) {
+        Map<String, Integer> deliveryCount = new LinkedHashMap<>();
+        for (String item : items) {
+            for (String option : config.get(item)) {
+                Integer count = deliveryCount.getOrDefault(option, 0);
+                deliveryCount.put(option, count + 1);
+            }
+        }
+        sortDeliveryCountMap(deliveryCount);
+        return deliveryCount;
+    }
+
     public Map<String, List<String>> split(List<String> items) {
-        Map<String, Integer> deliveryCount = getDeliveryCount(items);
+        Map<String, Integer> deliveryCount = getDeliveryCountMap(items);
         Map<String, List<String>> basketSplit = new LinkedHashMap<>();
+
         for (String item : items) {
             boolean found = false;
             for (String option : deliveryCount.keySet()) {
@@ -66,22 +79,12 @@ public class BasketSplitter
                     }
                 }
             }
-            sortDeliveryMap(deliveryCount);
+            sortDeliveryCountMap(deliveryCount);
         }
         return basketSplit;
     }
 
-    private Map<String, Integer> getDeliveryCount(List<String> items) {
-        Map<String, Integer> deliveryCount = new LinkedHashMap<>();
-        for (String item : items) {
-            for (String option : config.get(item)) {
-                Integer count = deliveryCount.getOrDefault(option, 0);
-                deliveryCount.put(option, count + 1);
-            }
-        }
-        sortDeliveryMap(deliveryCount);
-        return deliveryCount;
-    }
+
 }
 
 
